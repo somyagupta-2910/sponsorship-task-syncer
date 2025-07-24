@@ -45,7 +45,7 @@ A backend service to unify and sync sponsorship-related tasks from multiple plat
 - Schema includes `tasks` and `sponsors` tables.
 
 ### 6. Background ETL Sync (`background.py`)
-- **APScheduler-based job** runs every 5 minutes to sync tasks for all sponsors in the database.
+- **APScheduler-based job** runs every 1 minute to sync tasks for all sponsors in the database.
 - Ensures data is kept up-to-date even if no manual sync is triggered.
 
 ### 7. Sponsor Management
