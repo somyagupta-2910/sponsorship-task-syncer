@@ -17,5 +17,5 @@ async def sync_all_sponsors():
     print("[ETL] Synced tasks for sponsors:", sponsors)
 
 def start_scheduler():
-    scheduler.add_job(sync_all_sponsors, 'interval', minutes=5, id='etl_sync')
+    scheduler.add_job(sync_all_sponsors, 'interval', minutes=1, id='etl_sync')
     scheduler.start() 
