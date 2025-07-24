@@ -31,10 +31,19 @@ engine = sqlalchemy.create_engine(
 metadata.create_all(engine)
 
 async def upsert_tasks(tasks: List[Task]):
-    query = tasks_table.insert().prefix_with("OR REPLACE").values([
-        task.dict() for task in tasks
-    ])
-    await database.execute(query)
+    for task in tasks:
+        query = """
+        INSERT INTO tasks (id, sponsor_id, source, name, due_date, status)
+        VALUES (:id, :sponsor_id, :source, :name, :due_date, :status)
+        ON CONFLICT(id) DO UPDATE SET
+            sponsor_id=excluded.sponsor_id,
+            source=excluded.source,
+            name=excluded.name,
+            due_date=excluded.due_date,
+            status=excluded.status
+        """
+        values = task.dict()
+        await database.execute(query=query, values=values)
 
 async def fetch_tasks_by_sponsor(
     sponsor_id: str,
@@ -56,9 +65,13 @@ async def fetch_tasks_by_sponsor(
     return [Task(**dict(row)) for row in rows]
 
 async def update_task_status(task_id: str, status: str) -> bool:
-    query = tasks_table.update().where(tasks_table.c.id == task_id).values(status=status)
-    result = await database.execute(query)
-    return result is not None 
+    query = """
+    UPDATE tasks
+    SET status = :status
+    WHERE id = :task_id
+    """
+    result = await database.execute(query=query, values={"status": status, "task_id": task_id})
+    return result is not None
 
 async def add_sponsor(sponsor_id: str):
     query = sponsors_table.insert().values(sponsor_id=sponsor_id)
