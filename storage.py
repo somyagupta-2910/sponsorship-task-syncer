@@ -19,6 +19,12 @@ tasks_table = sqlalchemy.Table(
     sqlalchemy.Column("status", sqlalchemy.String),
 )
 
+sponsors_table = sqlalchemy.Table(
+    "sponsors",
+    metadata,
+    sqlalchemy.Column("sponsor_id", sqlalchemy.String, primary_key=True),
+)
+
 engine = sqlalchemy.create_engine(
     DATABASE_URL.replace("+aiosqlite", ""), connect_args={"check_same_thread": False}
 )
@@ -53,3 +59,19 @@ async def update_task_status(task_id: str, status: str) -> bool:
     query = tasks_table.update().where(tasks_table.c.id == task_id).values(status=status)
     result = await database.execute(query)
     return result is not None 
+
+async def add_sponsor(sponsor_id: str):
+    query = sponsors_table.insert().values(sponsor_id=sponsor_id)
+    try:
+        await database.execute(query)
+    except Exception:
+        pass  # Ignore if already exists
+
+async def list_sponsors() -> list:
+    query = sponsors_table.select()
+    rows = await database.fetch_all(query)
+    return [row["sponsor_id"] for row in rows]
+
+async def remove_sponsor(sponsor_id: str):
+    query = sponsors_table.delete().where(sponsors_table.c.sponsor_id == sponsor_id)
+    await database.execute(query) 

@@ -5,14 +5,19 @@ from typing import List, Optional
 from integrations.salesforce import fetch_tasks as fetch_salesforce_tasks
 from integrations.asana import fetch_tasks as fetch_asana_tasks
 from integrations.google_calendar import fetch_tasks as fetch_gcal_tasks
-from storage import database, upsert_tasks, fetch_tasks_by_sponsor, update_task_status
+from storage import (
+    database, upsert_tasks, fetch_tasks_by_sponsor, update_task_status,
+    add_sponsor, list_sponsors, remove_sponsor
+)
 from datetime import datetime
+from background import start_scheduler
 
 app = FastAPI()
 
 @app.on_event("startup")
 async def startup():
     await database.connect()
+    start_scheduler()
 
 @app.on_event("shutdown")
 async def shutdown():
@@ -26,6 +31,24 @@ async def sync_tasks(sponsor_id: str, api_key: str = Depends(get_api_key)):
     tasks.extend(fetch_gcal_tasks(sponsor_id))
     await upsert_tasks(tasks)
     return tasks
+
+@app.post("/sponsors")
+async def post_sponsor(
+    sponsor_id: str = Body(..., embed=True, description="Sponsor ID to add"),
+    api_key: str = Depends(get_api_key)
+):
+    await add_sponsor(sponsor_id)
+    return {"sponsor_id": sponsor_id, "message": "Sponsor added"}
+
+@app.get("/sponsors")
+async def get_sponsors(api_key: str = Depends(get_api_key)):
+    sponsors = await list_sponsors()
+    return {"sponsors": sponsors}
+
+@app.delete("/sponsors/{sponsor_id}")
+async def delete_sponsor(sponsor_id: str, api_key: str = Depends(get_api_key)):
+    await remove_sponsor(sponsor_id)
+    return {"sponsor_id": sponsor_id, "message": "Sponsor removed"}
 
 @app.get("/tasks", response_model=List[Task])
 async def get_tasks(
